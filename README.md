@@ -8,7 +8,6 @@ FIXME
 
 ## License
 
-Copyright © 2018 FIXME
+Copyright © 2019
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the [GPL V3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
