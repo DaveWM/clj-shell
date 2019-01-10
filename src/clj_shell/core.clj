@@ -1,4 +1,8 @@
 (ns clj-shell.core
+  "This ns contains the core api for clj-shell. It is designed to be used from the repl.
+   Most of the function names mirror the names of unix shell commands (ls, mv!, etc.), but there are also some functions that have no analogous unix command (e.g. paste, up!, etc.).
+
+   Note: all 'path' arguments can be either string file paths (absolute, or relative to the current working directory) or java.io.File objects. Using '~' for the home directory is allowed."
   (:require [clojure.java.io :as io]
             [clojure.string])
   (:import (java.awt.datatransfer DataFlavor StringSelection)
@@ -7,7 +11,12 @@
 
 
 (defonce *cwd (atom (io/file (.getAbsolutePath (io/file "")) "")))
+(alter-meta! #'*cwd assoc :doc "Atom containing the current working directory, used only by functions in this ns.
+Note that this is completely separate from the current working directory of the application.
+Avoid swap!-ing or reset!-ing this atom, use cd!, up!, or back! instead.")
 (defonce *cwd-history (atom []))
+(alter-meta! #'*cwd-history assoc :doc "Atom containing the history of the *cwd atom, not including the current value.
+It is recommended not to update this atom, and treat it as read-only.")
 (def home-dir (System/getProperty "user.home"))
 
 
@@ -25,15 +34,21 @@
   (.getSystemClipboard (java.awt.Toolkit/getDefaultToolkit)))
 
 
-(defn paste []
+(defn paste
+  "Returns the data in the clipboard as a string."
+  []
   (.getData clipboard (DataFlavor/stringFlavor)))
 
 
-(defn copy [s]
+(defn copy!
+  "Replaces the clipboard with the given string s."
+  [s]
   (.setContents clipboard (StringSelection. (str s)) nil))
 
 
-(defn ->file [path]
+(defn ->file
+  "Coerces the given path to a java.io.File object. If given a file object, will return it unchanged."
+  [path]
   (let [path-with-home-dir (clojure.string/replace path #"^~" home-dir)
         absolute?          (clojure.string/starts-with? path-with-home-dir "/")]
     (if absolute?
@@ -41,13 +56,17 @@
       (io/file (.getAbsolutePath @*cwd) path-with-home-dir))))
 
 
-(defn file-name [path]
+(defn file-name
+  "Returns the file name for the file at the given path."
+  [path]
   (-> path
       ->file
       .getName))
 
 
-(defn file-type [path]
+(defn file-type
+  "Returns the file type of the given file/path. "
+  [path]
   (let [^java.io.File file (->file path)]
     (cond
       (.isDirectory file) :directory
@@ -55,25 +74,35 @@
       (.isFile file) :file)))
 
 
-(defn exists? [path]
+(defn exists?
+  "Returns true if there is a file at the given path, false otherwise."
+  [path]
   (-> path
       ->file
       .exists))
 
 
-(defn hidden? [path]
+(defn hidden?
+  "Returns true if the file at the given path is hidden (i.e. it is a dotfile), false otherwise."
+  [path]
   (clojure.string/starts-with? (file-name path) "."))
 
 
-(defn file-size [path]
+(defn file-size
+  "Returns the size, in bytes, of the file at the given path."
+  [path]
   (.length (->file path)))
 
 
-(defn file? [f]
+(defn file?
+  "Returns true if f is a java.io.File object, false otherwise."
+  [f]
   (instance? java.io.File f))
 
 
 (defn ls
+  "Lists the files in the directory at the given path. Will use the current working directory (*cwd) if no argument is provided.
+   Returns a seq of java.io.File objects."
   ([] (ls (->file "")))
   ([path]
    (->> path
@@ -83,6 +112,9 @@
 
 
 (defn tree
+  "Returns a tree of all the files and directories under the given path.
+   The returned tree is in the format [directory '(file1 file2 [subdirectory '(file3)])].
+   Will no follow symlinks."
   ([] (tree ""))
   ([path]
    (let [f (->file path)]
@@ -92,6 +124,10 @@
 
 
 (defn print-tree
+  "Prints a tree, presumably returned from the tree fn, in a more readable format.
+
+  Opts:
+  display-fn - single argument function, taking a java.io.File object, called for each file in the tree. Returns what should be printed for the given file."
   ([t] (print-tree t {}))
   ([t opts] (print-tree t opts 0))
   ([t {:keys [display-fn] :or {display-fn file-name} :as opts} indent]
@@ -106,7 +142,9 @@
    nil))
 
 
-(defn walk-tree [f t]
+(defn walk-tree
+  "Walks the given tree t, presumably returned from the tree fn, and transforms each file by running it through f."
+  [f t]
   (clojure.walk/postwalk
     (fn [x]
       (if (file? x)
@@ -115,7 +153,10 @@
     t))
 
 
-(defn filter-tree [predicate t]
+(defn filter-tree
+  "Walks the given tree t, presumably returned from the tree fn, and filters out any files not matching the given predicate.
+   Will remove any directories with no children from the returned tree."
+  [predicate t]
   (if (sequential? t)
     (let [[dir children] t
           filtered-children (->> children
@@ -127,6 +168,7 @@
 
 
 (defn flatten-tree [t]
+  "Returns a seq of all files (including directories) in the given tree"
   (->> t
        (tree-seq sequential? second)
        (map #(if (sequential? %)
@@ -134,24 +176,32 @@
                %))))
 
 
-(defn pwd []
+(defn pwd
+  "Returns the current working directory, i.e. the value of the *cwd atom."
+  []
   @*cwd)
 
 
-(defn cd! [path]
+(defn cd!
+  "Changes the current working directory to the given path. Note: call back! or up! instead of passing '..' or '-' to this fn."
+  [path]
   (let [^java.io.File dir (->file path)]
     (if (exists? dir)
       (reset! *cwd dir)
       (println "Path does not exist: " path))))
 
 
-(defn up! []
+(defn up!
+  "Moves the current working directory up one level."
+  []
   (swap! *cwd #(if-let [parent (.getParentFile %)]
                  parent
                  %)))
 
 
-(defn back! []
+(defn back!
+  "Goes back to the previous current working directory (if there is one)."
+  []
   (when-let [prev-cwd (last @*cwd-history)]
     (reset! *cwd prev-cwd)
     (swap! *cwd-history (comp pop pop)))
@@ -163,6 +213,7 @@
 
 
 (defn head
+  "Returns a string of the first n lines of the file at the given path. Returns 10 lines if n is not provided."
   ([path] (head path 10))
   ([path n]
    (->> path
@@ -174,6 +225,7 @@
 
 
 (defn tail
+  "Returns a string of the last n lines of the file at the given path. Returns 10 lines if n is not provided."
   ([path] (tail path 10))
   ([path n]
    (->> path
@@ -184,17 +236,25 @@
         unlines)))
 
 
-(def cat (comp slurp ->file))
+(def cat
+  "Returns a string of the whole contents of the file at the given path."
+  (comp slurp ->file))
 
 
-(defn cp [source dest]
+(defn cp!
+  "Copies a file from source to dest."
+  [source dest]
   (io/copy (->file source) (->file dest)))
 
 
-(defn rm [path]
+(defn rm!
+  "Removes the file at the given path."
+  [path]
   (io/delete-file (->file path)))
 
 
-(defn mv [source dest]
-  (do (cp source dest)
-      (rm source)))
+(defn mv!
+  "Moves a file from source to dest."
+  [source dest]
+  (do (cp! source dest)
+      (rm! source)))
