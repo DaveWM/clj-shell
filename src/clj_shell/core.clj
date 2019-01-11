@@ -14,10 +14,14 @@
 (alter-meta! #'*cwd assoc :doc "Atom containing the current working directory, used only by functions in this ns.
 Note that this is completely separate from the current working directory of the application.
 Avoid swap!-ing or reset!-ing this atom, use cd!, up!, or back! instead.")
+
 (defonce *cwd-history (atom []))
 (alter-meta! #'*cwd-history assoc :doc "Atom containing the history of the *cwd atom, not including the current value.
 It is recommended not to update this atom, and treat it as read-only.")
-(def home-dir (System/getProperty "user.home"))
+
+(def home-dir
+  "The current user's home directory"
+  (System/getProperty "user.home"))
 
 
 (add-watch *cwd :cwd-history
@@ -31,6 +35,7 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (def ^java.awt.datatransfer.Clipboard clipboard
+  "The system clipboard. See [here](https://docs.oracle.com/javase/7/docs/api/java/awt/datatransfer/Clipboard.html) for available methods."
   (.getSystemClipboard (java.awt.Toolkit/getDefaultToolkit)))
 
 
