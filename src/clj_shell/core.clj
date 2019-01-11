@@ -7,7 +7,7 @@
             [clojure.string])
   (:import (java.awt.datatransfer DataFlavor StringSelection)
            (java.nio.file Files))
-  (:refer-clojure :exclude [cat]))
+  (:refer-clojure :exclude [cat find]))
 
 
 (defonce *cwd (atom (io/file (.getAbsolutePath (io/file "")) "")))
@@ -64,8 +64,16 @@ It is recommended not to update this atom, and treat it as read-only.")
       .getName))
 
 
+(defn file-path
+  "Returns the absolute file path for the file at the given path."
+  [path]
+  (-> path
+      ->file
+      .getAbsolutePath))
+
+
 (defn file-type
-  "Returns the file type of the given file/path. "
+  "Returns the file type of the given file/path."
   [path]
   (let [^java.io.File file (->file path)]
     (cond
@@ -92,6 +100,25 @@ It is recommended not to update this atom, and treat it as read-only.")
   "Returns the size, in bytes, of the file at the given path."
   [path]
   (.length (->file path)))
+
+
+(defn matches
+  "Returns a predicate which applies `match-value-fn` to its input and compares it to `value`, using the `compare` fn."
+  [value match-value-fn compare]
+  (fn [x]
+    (compare value (match-value-fn x))))
+
+
+(defn matches-exactly
+  "Returns a predicate that transforms its input using `match-value-fn`, and returns true iff the result is equal to `value`."
+  [value match-value-fn]
+  (matches value match-value-fn =))
+
+
+(defn matches-regex
+  "Returns a predicate that transforms its input using `match-value-fn`, and returns true iff `regex` matches the result."
+  [regex match-value-fn]
+  (matches regex match-value-fn re-find))
 
 
 (defn file?
@@ -167,13 +194,29 @@ It is recommended not to update this atom, and treat it as read-only.")
       t)))
 
 
-(defn flatten-tree [t]
+(defn flatten-tree
   "Returns a seq of all files (including directories) in the given tree"
+  [t]
   (->> t
        (tree-seq sequential? second)
        (map #(if (sequential? %)
                (first %)
                %))))
+
+
+(defn find
+  "Returns a seq of files under the directory at `path` (including those in subdirectories) that pass the given predicate.
+  Will use the current working directory (*cwd) as `path` if no argument is provided.
+
+  The 'matches*' fns work well for composing the `predicate`, for example:
+  ```
+  (find (matches-exactly \"project.clj\" file-name))
+  ```"
+  ([predicate] (find predicate ""))
+  ([predicate path]
+   (->> (tree path)
+        flatten-tree
+        (filter predicate))))
 
 
 (defn pwd
