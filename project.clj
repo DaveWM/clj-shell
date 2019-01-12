@@ -1,4 +1,4 @@
-(defproject clj-shell "0.1.0-SNAPSHOT"
+(defproject davewm/clj-shell "0.1.0-SNAPSHOT"
   :description "Shell-like utility functions for Clojure"
   :url "https://github.com/DaveWM/clj-shell"
   :license {:name "GPL V3"

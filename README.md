@@ -1,4 +1,4 @@
-# clj-shell
+# clj-shell [![Clojars Project](https://img.shields.io/clojars/v/davewm/clj-shell.svg)](https://clojars.org/davewm/clj-shell)
 ### _Alpha - subject to breaking changes_ 
 
 [Documentation](https://davewm.github.io/clj-shell/)
