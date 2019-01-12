@@ -1,8 +1,8 @@
 (ns clj-shell.core
   "This ns contains the core api for clj-shell. It is designed to be used from the repl.
-   Most of the function names mirror the names of unix shell commands (ls, mv!, etc.), but there are also some functions that have no analogous unix command (e.g. paste, up!, etc.).
+   Most of the function names mirror the names of unix shell commands (`ls`, `mv!`, etc.), but there are also some functions that have no analogous unix command (e.g. `paste`, `up!`, etc.).
 
-   Note: all 'path' arguments can be either string file paths (absolute, or relative to the current working directory) or java.io.File objects. Using '~' for the home directory is allowed."
+   Note: all 'path' arguments can be either string file paths (absolute, or relative to the current working directory) or java.io.File objects. Using `~` for the home directory is allowed."
   (:require [clojure.java.io :as io]
             [clojure.string])
   (:import (java.awt.datatransfer DataFlavor StringSelection)
@@ -13,10 +13,10 @@
 (defonce *cwd (atom (io/file (.getAbsolutePath (io/file "")) "")))
 (alter-meta! #'*cwd assoc :doc "Atom containing the current working directory, used only by functions in this ns.
 Note that this is completely separate from the current working directory of the application.
-Avoid swap!-ing or reset!-ing this atom, use cd!, up!, or back! instead.")
+Avoid swap!-ing or reset!-ing this atom, use [[cd!]], [[up!]], or [[back!]] instead.")
 
 (defonce *cwd-history (atom []))
-(alter-meta! #'*cwd-history assoc :doc "Atom containing the history of the *cwd atom, not including the current value.
+(alter-meta! #'*cwd-history assoc :doc "Atom containing the history of the [[*cwd]] atom, not including the current value.
 It is recommended not to update this atom, and treat it as read-only.")
 
 (def home-dir
@@ -46,13 +46,13 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn copy!
-  "Replaces the clipboard with the given string s."
+  "Replaces the data in the clipboard with the given string s."
   [s]
   (.setContents clipboard (StringSelection. (str s)) nil))
 
 
 (defn ->file
-  "Coerces the given path to a java.io.File object. If given a file object, will return it unchanged."
+  "Coerces the given path to a `java.io.File` object. If given a file object, will return it unchanged."
   [path]
   (let [path-with-home-dir (clojure.string/replace path #"^~" home-dir)
         absolute?          (clojure.string/starts-with? path-with-home-dir "/")]
@@ -133,8 +133,8 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn ls
-  "Lists the files in the directory at the given path. Will use the current working directory (*cwd) if no argument is provided.
-   Returns a seq of java.io.File objects."
+  "Lists the files in the directory at the given path. Will use the current working directory ([[*cwd]]) if no argument is provided.
+   Returns a seq of `java.io.File` objects."
   ([] (ls (->file "")))
   ([path]
    (->> path
@@ -145,8 +145,8 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 (defn tree
   "Returns a tree of all the files and directories under the given path.
-   The returned tree is in the format [directory '(file1 file2 [subdirectory '(file3)])].
-   Will no follow symlinks."
+   The returned tree is in the format `[directory '(file1 file2 [subdirectory '(file3)])]`.
+   Will not follow symlinks."
   ([] (tree ""))
   ([path]
    (let [f (->file path)]
@@ -156,10 +156,10 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn print-tree
-  "Prints a tree, presumably returned from the tree fn, in a more readable format.
+  "Prints a tree, presumably returned from the [[tree]] fn, in a more readable format.
 
   Opts:
-  display-fn - single argument function, taking a java.io.File object, called for each file in the tree. Returns what should be printed for the given file."
+  display-fn - single argument function, taking a `java.io.File` object, called for each file in the tree. Returns what should be printed for the given file."
   ([t] (print-tree t {}))
   ([t opts] (print-tree t opts 0))
   ([t {:keys [display-fn] :or {display-fn file-name} :as opts} indent]
@@ -175,7 +175,7 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn walk-tree
-  "Walks the given tree t, presumably returned from the tree fn, and transforms each file by running it through f."
+  "Walks the given tree `t`, presumably returned from the [[tree]] fn, and transforms each file by running it through `f`."
   [f t]
   (clojure.walk/postwalk
     (fn [x]
@@ -186,7 +186,7 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn filter-tree
-  "Walks the given tree t, presumably returned from the tree fn, and filters out any files not matching the given predicate.
+  "Walks the given tree `t`, presumably returned from the [[tree]] fn, and filters out any files not matching the given predicate.
    Will remove any directories with no children from the returned tree."
   [predicate t]
   (if (sequential? t)
@@ -211,7 +211,7 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 (defn find
   "Returns a seq of files under the directory at `path` (including those in subdirectories) that pass the given predicate.
-  Will use the current working directory (*cwd) as `path` if no argument is provided.
+  Will use the current working directory ([[*cwd]]) as `path` if no argument is provided.
 
   The 'matches*' fns work well for composing the `predicate`, for example:
   ```
@@ -225,13 +225,13 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn pwd
-  "Returns the current working directory, i.e. the value of the *cwd atom."
+  "Returns the current working directory, i.e. the value of the [[*cwd]] atom."
   []
   @*cwd)
 
 
 (defn cd!
-  "Changes the current working directory to the given path. Note: call back! or up! instead of passing '..' or '-' to this fn."
+  "Changes the current working directory to the given path. Note: prefer calling [[back!]] or [[up!]] instead of passing '..' or '-' to this fn."
   [path]
   (let [^java.io.File dir (->file path)]
     (if (exists? dir)
@@ -261,7 +261,7 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn head
-  "Returns a string of the first n lines of the file at the given path. Returns 10 lines if n is not provided."
+  "Returns a string of the first `n` lines of the file at the given path. Returns 10 lines if `n` is not provided."
   ([path] (head path 10))
   ([path n]
    (->> path
@@ -273,7 +273,7 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn tail
-  "Returns a string of the last n lines of the file at the given path. Returns 10 lines if n is not provided."
+  "Returns a string of the last `n` lines of the file at the given path. Returns 10 lines if `n` is not provided."
   ([path] (tail path 10))
   ([path n]
    (->> path
@@ -290,7 +290,7 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn cp!
-  "Copies a file from source to dest."
+  "Copies a file from `source` to `dest`."
   [source dest]
   (io/copy (->file source) (->file dest)))
 
@@ -302,7 +302,7 @@ It is recommended not to update this atom, and treat it as read-only.")
 
 
 (defn mv!
-  "Moves a file from source to dest."
+  "Moves a file from `source` to `dest`."
   [source dest]
   (do (cp! source dest)
       (rm! source)))
