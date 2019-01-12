@@ -1,6 +1,8 @@
 # clj-shell
 ### _Alpha - subject to breaking changes_ 
 
+[Documentation](https://davewm.github.io/clj-shell/)
+
 ## Rationale
 
 `clj-shell` provides some unix-command-esque utility functions, primarily for use from the repl.
@@ -21,7 +23,7 @@ If you're using Leiningen:
 Or tools.deps:
   * Add `{clj-shell {:mvn/version "0.1.0-snapshot"}}` to your `deps.edn`.
 * Start a repl, and enter `(use 'clj-shell.core)`
-* See the docs for a list of available functions
+* See the [docs](https://davewm.github.io/clj-shell/) for a list of available functions
 
 ## License
 
