@@ -19,9 +19,9 @@ Here are some common functions which `clj-shell` does not provide, and a recomme
 ## Usage
 
 If you're using Leiningen:
-  * Add `[clj-shell "0.1.0-SNAPSHOT"]` to your `project.clj`.
+  * Add `[davewm/clj-shell "0.1.0-SNAPSHOT"]` to your `project.clj`.
 Or tools.deps:
-  * Add `{clj-shell {:mvn/version "0.1.0-snapshot"}}` to your `deps.edn`.
+  * Add `davewm/clj-shell {:mvn/version "0.1.0-snapshot"}` to your `deps.edn`.
 * Start a repl, and enter `(use 'clj-shell.core)`
 * See the [docs](https://davewm.github.io/clj-shell/) for a list of available functions
 
