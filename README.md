@@ -1,4 +1,5 @@
 # clj-shell
+### _Alpha - subject to breaking changes_ 
 
 ## Rationale
 
